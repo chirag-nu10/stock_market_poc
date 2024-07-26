@@ -105,6 +105,24 @@ def analyze_stock_data(data):
     )
     return response.choices[0].message.content
 
+def analyze_portfolio_data(data):
+    """Analyze stock data using GPT-3.5 and return insights."""
+    prompt = f"""
+    You are a financial analyst. Analyze the following stock data and provide insights based on the technical indicators:
+    {data.to_string()}
+    """
+    response = openai.chat.completions.create(
+        # model="sermo",
+        model = "nu10",
+        messages=[
+                {"role": "system", "content": "You are a financial analyst, helping user to analyze portfolio based on technical indicators."},
+                {"role": "user", "content": f"Analyze the following portfolio data and provide detailed insights in the following format:\n1. Conclusion & course of action for investor \n2. List down the reason to reach above conclusion in bullet points.\n Data:\n'''{data.to_string()}'''"}
+            ],
+        max_tokens=1000
+    )
+
+    return response.choices[0].message.content
+
 def gpt_genie_says(insights):
     response = openai.chat.completions.create(
         model="nu10",
@@ -180,7 +198,7 @@ def analyzeportfolio():
     try:
         stock_data = get_weighted_data(pairs)
         stock_data = add_technical_indicators(stock_data)
-        insights = analyze_stock_data(stock_data.tail(20))
+        insights = analyze_portfolio_data(stock_data.tail(20))
         recommendation = gpt_genie_says(insights)
         
         conclusion_patterns = [
