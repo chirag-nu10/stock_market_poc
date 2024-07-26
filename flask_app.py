@@ -47,7 +47,7 @@ def fetchStockData(symbol):
     
     hlcv_data = hist_data[['Open', 'High', 'Low', 'Close', 'Volume']]
     hlcv_data.index=hlcv_data.index.strftime('%Y-%m-%d')
-    return hlcv_data
+    return hlcv_data.tail(100)
 
 def get_weighted_data(pairs):
     num_stocks = len(pairs)
