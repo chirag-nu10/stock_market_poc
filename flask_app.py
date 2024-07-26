@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 import requests
 import json
 import yfinance as yf
-
+import base64
 
 load_dotenv()
 
@@ -46,8 +46,35 @@ def fetchStockData(symbol):
     hist_data = stock_data.history(period="max")
     
     hlcv_data = hist_data[['Open', 'High', 'Low', 'Close', 'Volume']]
-    hlcv_data.index=hlcv_data.index.strftime('%Y-%m-%d')
+    hlcv_data.index = hlcv_data.index.strftime('%Y-%m-%d')
     return hlcv_data.tail(100)
+
+def plot_hlcv(data, filename):
+    fig, ax1 = plt.subplots(figsize=(30, 15))
+
+    # Plot high, low, close
+    ax1.plot(data.index, data['High'], label='High', color='g')
+    ax1.plot(data.index, data['Low'], label='Low', color='r')
+    ax1.plot(data.index, data['Close'], label='Close', color='b')
+
+    ax1.set_xlabel('Date')
+    ax1.set_ylabel('Price')
+    ax1.set_title(f'HLCV Trend')
+    ax1.legend(loc='upper left')
+    plt.xticks(rotation=90)
+    # Create a secondary y-axis for volume
+    ax2 = ax1.twinx()
+    ax2.bar(data.index, data['Volume'], alpha=0.3, color='gray')
+    ax2.set_ylabel('Volume')
+    
+    # Save the plot to a file
+    plt.savefig(filename)
+    # plt.show()
+
+def encode_image_to_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+    return encoded_string
 
 def get_weighted_data(pairs):
     num_stocks = len(pairs)
@@ -134,7 +161,7 @@ def analyze_portfolio_data(data):
     )
 
     print(response.choices[0].message.content)
-
+    
     return response.choices[0].message.content
 
 def gpt_genie_says(insights):
@@ -253,7 +280,7 @@ def analyzestocks():
             'recommendation': recommendation,
             'conclusion': conclusion,
             'reasons': reasons,
-            'data':stock_data.tail(20).to_dict()
+            'data':stock_data.tail(20).to_dict(),
         }
 
         return jsonify(result)
@@ -267,8 +294,8 @@ def analyzeportfolio():
     pairs = [(item['stock'], item['quantity']) for item in data['portfolio']]
     
     try:
-        stock_data = get_weighted_data(pairs)
-        stock_data = add_technical_indicators(stock_data)
+        stock_data1 = get_weighted_data(pairs)
+        stock_data = add_technical_indicators(stock_data1)
         insights = analyze_portfolio_data(stock_data.tail(20))
         recommendation = gpt_genie_says(insights)
         
@@ -356,12 +383,14 @@ def analyzeportfolio():
                 if match:
                     reasons = match.group(1).strip()
                     break
-
+                    
+        plot_hlcv(stock_data1, "hlcv_plot.png")
         result = {
             'recommendation': recommendation,
             'conclusion': conclusion,
             'reasons': reasons,
-            'data':stock_data.tail(20).to_dict()
+            'data':stock_data.tail(20).to_dict(),
+            'Image' : encode_image_to_base64("hlcv_plot.png")
         }
 
         return jsonify(result)
