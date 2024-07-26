@@ -103,6 +103,7 @@ def analyze_stock_data(data):
             ],
         max_tokens=1000
     )
+    print(response.choices[0].message.content)
     return response.choices[0].message.content
 
 def analyze_portfolio_data(data):
@@ -120,6 +121,8 @@ def analyze_portfolio_data(data):
             ],
         max_tokens=1000
     )
+
+    print(response.choices[0].message.content)
 
     return response.choices[0].message.content
 
@@ -182,7 +185,8 @@ def analyzestocks():
         result = {
             'recommendation': recommendation,
             'conclusion': conclusion,
-            'reasons': reasons
+            'reasons': reasons,
+            'data':stock_data.to_dict()
         }
 
         return jsonify(result)
@@ -234,7 +238,8 @@ def analyzeportfolio():
         result = {
             'recommendation': recommendation,
             'conclusion': conclusion,
-            'reasons': reasons
+            'reasons': reasons,
+            'data':stock_data.to_dict()
         }
 
         return jsonify(result)
