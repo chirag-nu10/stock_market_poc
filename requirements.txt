@@ -1,0 +1,11 @@
+streamlit
+pandas
+matplotlib
+alpha_vantage
+talipp
+openai
+regex
+dotenv
+requests
+json
+flask
