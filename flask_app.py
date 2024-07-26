@@ -10,6 +10,8 @@ import os
 from dotenv import load_dotenv
 import requests
 import json
+import yfinance as yf
+
 
 load_dotenv()
 
@@ -21,22 +23,31 @@ openai.api_base = os.getenv('AZURE_OPENAI_ENDPOINT')
 openai.api_version = os.getenv("OPENAI_API_VERSION")
 openai.api_key = os.getenv('AZURE_OPENAI_API_KEY')
 
+# def fetchStockDataPaid(symbol):
+#     url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={ALPHA_VANTAGE_API_KEY}'
+#     response = requests.get(url)
+#     data = response.json()
+#     data = pd.DataFrame(data['Time Series (Daily)']).T
+#     data = data.rename(columns={
+#         '1. open': 'Open',
+#         '2. high': 'High',
+#         '3. low': 'Low',
+#         '4. close': 'Close',
+#         '5. volume': 'Volume'
+#     })
+#     data = data.sort_index()
+#     numeric_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+#     data[numeric_columns] = data[numeric_columns].apply(pd.to_numeric)
+#     return data
+
 def fetchStockData(symbol):
-    url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={ALPHA_VANTAGE_API_KEY}'
-    response = requests.get(url)
-    data = response.json()
-    data = pd.DataFrame(data['Time Series (Daily)']).T
-    data = data.rename(columns={
-        '1. open': 'Open',
-        '2. high': 'High',
-        '3. low': 'Low',
-        '4. close': 'Close',
-        '5. volume': 'Volume'
-    })
-    data = data.sort_index()
-    numeric_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-    data[numeric_columns] = data[numeric_columns].apply(pd.to_numeric)
-    return data
+    
+    stock_data = yf.Ticker(symbol)
+    hist_data = stock_data.history(period="max")
+    
+    hlcv_data = hist_data[['Open', 'High', 'Low', 'Close', 'Volume']]
+    hlcv_data.index=hlcv_data.index.strftime('%Y-%m-%d')
+    return hlcv_data
 
 def get_weighted_data(pairs):
     num_stocks = len(pairs)
