@@ -177,10 +177,66 @@ def analyzestocks():
                 reasons = match.group(1).strip()
                 break
         
+
         if not conclusion:
-            conclusion = "Conclusion not found."
+            # conclusion = "Conclusion not found."
+            insights = analyze_stock_data(stock_data.tail(20))
+            recommendation = gpt_genie_says(insights)
+            
+            conclusion_patterns = [
+                r"1\.(.*?)2",
+                r"Conclusion\.(.*?)Reasons",
+            ]
+            
+            reasons_patterns = [
+                r"2\.(.*)",
+                r"Reasons\.(.*)",
+            ]
+            
+            conclusion = None
+            reasons = None
+            
+            for pattern in conclusion_patterns:
+                match = re.search(pattern, insights, re.DOTALL | re.IGNORECASE)
+                if match:
+                    conclusion = match.group(1).strip()
+                    break
+            
+            for pattern in reasons_patterns:
+                match = re.search(pattern, insights, re.DOTALL | re.IGNORECASE)
+                if match:
+                    reasons = match.group(1).strip()
+                    break
+
         if not reasons:
-            reasons = "Reasons not found."
+            # reasons = "Reasons not found."
+            insights = analyze_stock_data(stock_data.tail(20))
+            recommendation = gpt_genie_says(insights)
+            
+            conclusion_patterns = [
+                r"1\.(.*?)2",
+                r"Conclusion\.(.*?)Reasons",
+            ]
+            
+            reasons_patterns = [
+                r"2\.(.*)",
+                r"Reasons\.(.*)",
+            ]
+            
+            conclusion = None
+            reasons = None
+            
+            for pattern in conclusion_patterns:
+                match = re.search(pattern, insights, re.DOTALL | re.IGNORECASE)
+                if match:
+                    conclusion = match.group(1).strip()
+                    break
+            
+            for pattern in reasons_patterns:
+                match = re.search(pattern, insights, re.DOTALL | re.IGNORECASE)
+                if match:
+                    reasons = match.group(1).strip()
+                    break
 
         result = {
             'recommendation': recommendation,
