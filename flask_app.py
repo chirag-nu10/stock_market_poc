@@ -1,4 +1,6 @@
+from flask import Flask, request, jsonify
 import pandas as pd
+import matplotlib.pyplot as plt
 from alpha_vantage.timeseries import TimeSeries
 import talipp.indicators as ta
 from talipp.ohlcv import OHLCV
@@ -8,7 +10,6 @@ import os
 from dotenv import load_dotenv
 import requests
 import json
-from flask import Flask, request, jsonify
 
 load_dotenv()
 
@@ -87,7 +88,6 @@ def add_technical_indicators(data):
             data[name] = [indicator[i] for i in range(len(close_prices))]
         else:
             data[name] = [indicator[i] for i in range(len(data))]
-
     return data
 
 def analyze_stock_data(data):
@@ -95,62 +95,67 @@ def analyze_stock_data(data):
     You are a financial analyst. Analyze the following stock data and provide insights based on the technical indicators:
     {data.to_string()}
     """
-    response = openai.ChatCompletion.create(
-        model="nu10",
+    response = openai.chat.completions.create(
+        model = "nu10",
         messages=[
-            {"role": "system", "content": "You are a financial analyst, helping user to analyze stock based on technical indicators."},
-            {"role": "user", "content": f"Analyze the following stock data and provide detailed insights in the following format:\n1. Conclusion & course of action for investor \n2. List down the reason to reach above conclusion in bullet points.\n Data:\n'''{data.to_string()}'''"}
-        ],
+                {"role": "system", "content": "You are a financial analyst, helping user to analyze stock based on technical indicators."},
+                {"role": "user", "content": f"Analyze the following stock data and provide detailed insights in the following format:\n1. Conclusion & course of action for investor \n2. List down the reason to reach above conclusion in bullet points.\n Data:\n'''{data.to_string()}'''"}
+            ],
         max_tokens=1000
     )
-    return response.choices[0].message['content']
+    return response.choices[0].message.content
 
 def gpt_genie_says(insights):
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model="nu10",
         messages=[
-            {"role": "system", "content": "You are a helper, user send you insight about stock and you have to classify it in BUY, SELL or, HOLD"},
-            {"role": "user", "content": f"'''{insights}'''"}
-        ],
+                {"role": "system", "content": "You are a helper, user send you insight about stock and you have to classify it in BUY, SELL or, HOLD"},
+                {"role": "user", "content": f"'''{insights}'''"}
+            ],
         max_tokens=500
     )
-    return response.choices[0].message['content']
+    recommendation_0 = response.choices[0].message.content
+    pattern_rec = r'\b(BUY|SELL|HOLD)\b'
+    matches = re.search(pattern_rec, recommendation_0)
+    recommendation = matches.group(1)
+    return recommendation
 
 @app.route('/analyzestocks', methods=['POST'])
-def analyze_stocks():
+def analyzestocks():
+    data = request.get_json()
+    stock = data['stock']
+    
     try:
-        data = request.get_json()
-        stock = data['stock']
-        stock_data = fetchStockData(stock)
+        stock_data = get_weighted_data([(stock, 1)])
         stock_data = add_technical_indicators(stock_data)
         insights = analyze_stock_data(stock_data.tail(20))
         recommendation = gpt_genie_says(insights)
-
+        
         conclusion_patterns = [
             r"1\.(.*?)2",
             r"Conclusion\.(.*?)Reasons",
         ]
-
+        
         reasons_patterns = [
             r"2\.(.*)",
             r"Reasons\.(.*)",
         ]
-
+        
         conclusion = None
         reasons = None
-
+        
         for pattern in conclusion_patterns:
             match = re.search(pattern, insights, re.DOTALL | re.IGNORECASE)
             if match:
                 conclusion = match.group(1).strip()
                 break
-
+        
         for pattern in reasons_patterns:
             match = re.search(pattern, insights, re.DOTALL | re.IGNORECASE)
             if match:
                 reasons = match.group(1).strip()
                 break
-
+        
         if not conclusion:
             conclusion = "Conclusion not found."
         if not reasons:
@@ -161,45 +166,48 @@ def analyze_stocks():
             'conclusion': conclusion,
             'reasons': reasons
         }
+
         return jsonify(result)
+    
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e)})
 
 @app.route('/analyzeportfolio', methods=['POST'])
-def analyze_portfolio():
+def analyzeportfolio():
+    data = request.get_json()
+    pairs = [(item['stock'], item['quantity']) for item in data['portfolio']]
+    
     try:
-        data = request.get_json()
-        pairs = data['pairs']  # list of tuples [(stock1, quantity1), (stock2, quantity2), ...]
         stock_data = get_weighted_data(pairs)
         stock_data = add_technical_indicators(stock_data)
         insights = analyze_stock_data(stock_data.tail(20))
         recommendation = gpt_genie_says(insights)
-
+        
         conclusion_patterns = [
             r"1\.(.*?)2",
             r"Conclusion\.(.*?)Reasons",
         ]
-
+        
         reasons_patterns = [
             r"2\.(.*)",
             r"Reasons\.(.*)",
         ]
-
+        
         conclusion = None
         reasons = None
-
+        
         for pattern in conclusion_patterns:
             match = re.search(pattern, insights, re.DOTALL | re.IGNORECASE)
             if match:
                 conclusion = match.group(1).strip()
                 break
-
+        
         for pattern in reasons_patterns:
             match = re.search(pattern, insights, re.DOTALL | re.IGNORECASE)
             if match:
                 reasons = match.group(1).strip()
                 break
-
+        
         if not conclusion:
             conclusion = "Conclusion not found."
         if not reasons:
@@ -210,9 +218,11 @@ def analyze_portfolio():
             'conclusion': conclusion,
             'reasons': reasons
         }
+
         return jsonify(result)
+    
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e)})
 
 if __name__ == '__main__':
     app.run(debug=True)
