@@ -239,7 +239,7 @@ def analyzeportfolio():
             'recommendation': recommendation,
             'conclusion': conclusion,
             'reasons': reasons,
-            'data':stock_data.to_dict()
+            'data':stock_data.tail(20).to_dict()
         }
 
         return jsonify(result)
